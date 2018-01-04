@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <sys/time.h>
 #include <termios.h>
 #include <signal.h>
@@ -365,6 +366,11 @@ int main(int argc, char **argv) {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	srand(tv.tv_sec*1000000ULL + tv.tv_usec);
+
+	if (argc >= 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)) {
+		fprintf(stderr, "Usage: %s [width] [height] [nbombs]\n", argv[0]);
+		return 1;
+	}
 
 	int width = DEF_WIDTH;
 	int height = DEF_HEIGHT;
