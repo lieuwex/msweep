@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (nbombs >= width*height) {
-		fprintf(stdout, "nbombs (=%d) more than or equal to width * height (=%d)\n", nbombs, width*height);
+		fprintf(stderr, "nbombs (=%d) more than or equal to width * height (=%d)\n", nbombs, width*height);
 		return 1;
 	}
 
