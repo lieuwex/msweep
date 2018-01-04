@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <limits.h>
 #include <sys/time.h>
 #include <termios.h>
 #include <signal.h>
@@ -173,12 +174,14 @@ void board_gotocursor(Board *bd) {
 	board_goto(bd, bd->curx, bd->cury);
 }
 
-void board_shiftcursor(Board *bd, Direction dir) {
-	switch(dir) {
-	case UP: if (bd->cury>0) bd->cury--; else return; break;
-	case RIGHT: if (bd->curx<bd->w-1) bd->curx++; else return; break;
-	case DOWN: if (bd->cury<bd->h-1) bd->cury++; else return; break;
-	case LEFT: if (bd->curx>0) bd->curx--; else return; break;
+void board_shiftcursor(Board *bd, Direction dir, int ntimes) {
+	for (int i = 0; i < ntimes; i++) {
+		switch(dir) {
+		case UP: if (bd->cury>0) bd->cury--; else i = ntimes; break;
+		case RIGHT: if (bd->curx<bd->w-1) bd->curx++; else i = ntimes; break;
+		case DOWN: if (bd->cury<bd->h-1) bd->cury++; else i = ntimes; break;
+		case LEFT: if (bd->curx>0) bd->curx--; else i = ntimes; break;
+		}
 	}
 	board_gotocursor(bd);
 }
@@ -400,6 +403,7 @@ int main(int argc, char **argv) {
 	Key key;
 	bool quit = false;
 	int repeat = 1;
+	bool have_repeat_num = false;
 	while (!quit) {
 		board_draw(bd);
 		if (board_win(bd)) {
@@ -420,15 +424,23 @@ int main(int argc, char **argv) {
 		getkey(&key);
 		switch (key.type) {
 		case KNUM:
-			if (key.num > 1) {
+			if (have_repeat_num) {
+				if (repeat >= (INT_MAX - key.num) / 10) {  // would overflow
+					bel();
+					repeat = 1;
+					have_repeat_num = false;
+				} else {
+					repeat = 10 * repeat + key.num;
+				}
+			} else if (key.num >= 1) {
 				repeat = key.num;
+				have_repeat_num = true;
 			}
 			break;
 		case KARROW:
-			for (int i = 0; i < repeat; i++) {
-				board_shiftcursor(bd, key.dir);
-			}
+			board_shiftcursor(bd, key.dir, repeat);
 			repeat = 1;
+			have_repeat_num = false;
 			break;
 		case KCHAR:
 			switch (key.ch) {
@@ -453,9 +465,15 @@ int main(int argc, char **argv) {
 				bd = board_make(width, height, nbombs);
 				break;
 			}
+			if (have_repeat_num) bel();
+			repeat = 1;
+			have_repeat_num = false;
 			break;
 		default:
-			prflush("\x07");
+			bel();
+			if (have_repeat_num) bel();
+			repeat = 1;
+			have_repeat_num = false;
 			break;
 		}
 	}
