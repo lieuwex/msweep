@@ -346,9 +346,9 @@ void prompt_quit(int height) {
 	}
 }
 
-bool prompt_playagain(const char *msg, int height) {
+bool prompt_playagain(const char *msg, const char *timestamp, int height) {
 	char *str;
-	asprintf(&str, "\x1B[7m%s\x1B[0m\nPlay again?", msg);
+	asprintf(&str, "\x1B[7m%s (%s)\x1B[0m\nPlay again?", timestamp, msg);
 	return prompt(str, height);
 }
 
@@ -410,10 +410,7 @@ int main(int argc, char **argv) {
 			char *timestamp;
 			formatTime(&timestamp, time(NULL) - bd->startTime);
 
-			char *msg;
-			asprintf(&msg, "You win! (%s)", timestamp);
-
-			if (!prompt_playagain(msg, height + 2)) {
+			if (!prompt_playagain("You win!", timestamp, height + 2)) {
 				break;
 			}
 
@@ -457,7 +454,9 @@ int main(int argc, char **argv) {
 			case ' ':
 				if (!board_open(bd)) break;
 				board_revealbombs(bd);
-				if (!prompt_playagain("BOOM!", height + 2)) {
+				char *timestamp;
+				formatTime(&timestamp, time(NULL) - bd->startTime);
+				if (!prompt_playagain("BOOM!", timestamp, height + 2)) {
 					quit = true;
 					break;
 				}
