@@ -236,6 +236,7 @@ void board_flag(Board *bd) {
 
 void board_flood(Board *bd, int x, int y) {
 	bd->data[bd->w*y + x].open = true;
+	bd->data[bd->w*y + x].flag = false;
 	bd->nopen++;
 	if (bd->data[bd->w*y + x].count != 0) {
 		return;
