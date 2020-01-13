@@ -111,6 +111,8 @@ typedef struct Key {
 } Key;
 
 void getkey(Key *key) {
+	memset(key, 0, sizeof(Key));
+
 	char c = getchar();
 	if (c >= 48 && c <= 57) {
 		key->type = KNUM;
@@ -404,7 +406,9 @@ void prompt_quit(int height) {
 bool prompt_playagain(const char *msg, const char *timestamp, int height) {
 	char *str;
 	asprintf(&str, "\x1B[7m%s (%s)\x1B[0m\nPlay again?", timestamp, msg);
-	return prompt(str, height);
+	bool res = prompt(str, height);
+	free(str);
+	return res;
 }
 
 void signalend(int sig) {
@@ -469,6 +473,7 @@ int main(int argc, char **argv) {
 				break;
 			}
 
+			free(timestamp);
 			board_destroy(bd);
 			bd = board_make(width, height, nbombs);
 			continue;
@@ -515,6 +520,7 @@ int main(int argc, char **argv) {
 					quit = true;
 					break;
 				}
+				free(timestamp);
 				board_destroy(bd);
 				bd = board_make(width, height, nbombs);
 				break;
