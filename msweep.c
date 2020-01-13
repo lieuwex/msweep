@@ -421,7 +421,12 @@ void formatTime(char **dest, time_t seconds) {
 	int minutes = seconds / 60;
 	int hours = minutes / 60;
 	seconds = seconds % 60;
-	asprintf(dest, "%02d:%02d:%02ld", hours, minutes, seconds);
+
+	if (hours > 0) {
+		asprintf(dest, "%02d:%02d:%02ld", hours, minutes, seconds);
+	} else {
+		asprintf(dest, "%02d:%02ld", minutes, seconds);
+	}
 }
 
 int main(int argc, char **argv) {
