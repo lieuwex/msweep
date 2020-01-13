@@ -2,6 +2,7 @@
 // original by tomsmeding (http://www.tomsmeding.com)
 // fork by lieuwex (http://www.lieuwe.xyz)
 
+#define _GNU_SOURCE
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,36 @@
 
 #define prflush(...) do { printf(__VA_ARGS__); fflush(stdout); } while(0)
 
-inline void bel() {
+typedef enum Color {
+	C_DEFAULT,
+	C_RED,
+	C_YELLOW,
+	C_GREEN,
+} Color;
+
+static char *colorize(const char *string, Color color) {
+	const char *color_code = "";
+	switch (color) {
+	case C_DEFAULT:
+		color_code = "\x1B[0m";
+		break;
+	case C_RED:
+		color_code = "\x1B[31m";
+		break;
+	case C_YELLOW:
+		color_code = "\x1B[33m";
+		break;
+	case C_GREEN:
+		color_code = "\x1B[32m";
+		break;
+	}
+
+	char *buf;
+	asprintf(&buf, "%s%s\x1B[0m", color_code, string);
+	return buf;
+}
+
+static void bel() {
 	prflush("\x07");
 }
 
@@ -189,11 +219,35 @@ void board_shiftcursor(Board *bd, Direction dir, int ntimes) {
 // doesn't gotoxy
 void board_drawcell(Board *bd, int x, int y) {
 	const Data *data = bd->data + (bd->w*y + x);
-	if (data->flag) putchar('#');
-	// else if(data->bomb)putchar(','); // DEBUG
-	else if (!data->open) putchar('.');
-	else if (data->count==0) putchar(' ');
-	else putchar('0'+data->count);
+
+	char c;
+	Color color = C_DEFAULT;
+
+	if (data->flag) {
+		c = '#';
+	//} else if (data->bomb) { // DEBUG
+	//	putchar(',');
+	//	return;
+	} else if (!data->open) {
+		putchar('.');
+	} else if (data->count==0) {
+		putchar(' ');
+	} else {
+		c = '0'+data->count;
+
+		if (data->count == 1) {
+			color = C_GREEN;
+		} else if (data->count <= 4) {
+			color = C_YELLOW;
+		} else {
+			color = C_RED;
+		}
+	}
+
+	char arr[] = { c, '\0' };
+	char *str = colorize(arr, color);
+	printf("%s", str);
+	free(str);
 }
 
 void board_draw(Board *bd) {
