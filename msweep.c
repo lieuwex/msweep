@@ -26,6 +26,7 @@ typedef enum Color {
 	C_GREEN,
 } Color;
 
+// colorize the given string, color is reset at the end
 static char *colorize(const char *string, Color color) {
 	const char *color_code = "";
 	switch (color) {
@@ -48,6 +49,7 @@ static char *colorize(const char *string, Color color) {
 	return buf;
 }
 
+// audible bel
 static void bel() {
 	prflush("\x07");
 }
@@ -61,6 +63,7 @@ typedef enum Direction {
 
 struct termios tios_bak;
 
+// init the terminal screen with correct settings
 void initscreen(void) {
 	struct termios tios;
 	tcgetattr(0, &tios_bak);
@@ -88,11 +91,14 @@ void initscreen(void) {
 	prflush("\x1B[?1049h\x1B[2J\x1B[H");
 }
 
+// reset the terminal screen to the original settings before initscreen was
+// called
 void endscreen(void) {
 	tcsetattr(0, TCSAFLUSH, &tios_bak);
 	prflush("\x1B[?1049l");
 }
 
+// move the cursor to the given (x,y) on the screen (0-indexed)
 void gotoxy(int x, int y) {
 	prflush("\x1B[%d;%dH", y+1, x+1);
 }
@@ -110,6 +116,7 @@ typedef struct Key {
 	unsigned short num;
 } Key;
 
+// get the key, putting the values in the given key, should be non-NULL.
 void getkey(Key *key) {
 	memset(key, 0, sizeof(Key));
 
@@ -159,6 +166,7 @@ typedef struct Data{
 	int count;
 } Data;
 
+// init the given Data instance
 void data_init(Data *data) {
 	data->open = false;
 	data->bomb = false;
@@ -174,6 +182,7 @@ typedef struct Board{
 	time_t startTime;
 } Board;
 
+// allocate a new board with the given width, height, and number of bombs
 Board* board_make(int w, int h, int nbombs) {
 	Board *bd = (Board *) malloc(sizeof(Board));
 	bd->w = w;
@@ -192,20 +201,24 @@ Board* board_make(int w, int h, int nbombs) {
 	return bd;
 }
 
+// destroy the given board, freeing all data
 void board_destroy(Board *bd) {
 	free(bd->data);
 	free(bd);
 }
 
+// move the cursor to the given (x,y) on the board
 void board_goto(Board *bd, int x, int y) {
 	(void)bd;
 	gotoxy(2 + 2*x, 1 + y);
 }
 
+// move the cursor on screen to the current cursor location in state
 void board_gotocursor(Board *bd) {
 	board_goto(bd, bd->curx, bd->cury);
 }
 
+// move cursor `ntimes` steps in the given direction `dir`
 void board_shiftcursor(Board *bd, Direction dir, int ntimes) {
 	for (int i = 0; i < ntimes; i++) {
 		switch(dir) {
@@ -218,6 +231,7 @@ void board_shiftcursor(Board *bd, Direction dir, int ntimes) {
 	board_gotocursor(bd);
 }
 
+// draw the cell info at x,y on the terminal
 // doesn't gotoxy
 void board_drawcell(Board *bd, int x, int y) {
 	const Data *data = bd->data + (bd->w*y + x);
@@ -252,6 +266,7 @@ void board_drawcell(Board *bd, int x, int y) {
 	free(str);
 }
 
+// draw the board on screen
 void board_draw(Board *bd) {
 	gotoxy(0, 0);
 	putchar('+');
@@ -280,6 +295,7 @@ void board_draw(Board *bd) {
 	board_gotocursor(bd);
 }
 
+// set a flag at the current board location
 void board_flag(Board *bd) {
 	Data *data = bd->data+(bd->w*bd->cury + bd->curx);
 	if (data->open) {
@@ -290,6 +306,7 @@ void board_flag(Board *bd) {
 	bd->nflags += 2*data->flag - 1;
 }
 
+// flood the board at the given (x,y)
 void board_flood(Board *bd, int x, int y) {
 	bd->data[bd->w*y + x].open = true;
 	bd->data[bd->w*y + x].flag = false;
@@ -315,7 +332,9 @@ void board_flood(Board *bd, int x, int y) {
 	}
 }
 
-void board_gen(Board *bd, int x, int y) {
+// fill the given board, should be empty.
+// no bomb is placed on the given (x,y)
+void board_fill(Board *bd, int x, int y) {
 	int w = bd->w;
 	int h = bd->h;
 	int chosenpos = (bd->w*y + x);
@@ -340,10 +359,11 @@ void board_gen(Board *bd, int x, int y) {
 	bd->startTime = time(NULL);
 }
 
+// opens the cell at the current cursor position
 bool board_open(Board *bd) {
 	Data *data = bd->data + (bd->w*bd->cury + bd->curx);
 	if (bd->startTime == -1) {
-		board_gen(bd, bd->curx, bd->cury);
+		board_fill(bd, bd->curx, bd->cury);
 	}
 
 	if (data->flag || data->open) {
@@ -356,6 +376,7 @@ bool board_open(Board *bd) {
 	return false;
 }
 
+// reveal all bombs
 void board_revealbombs(Board *bd) {
 	printf("\x1B[7m");
 	for(int y=0;y<bd->h;y++)
@@ -369,10 +390,12 @@ void board_revealbombs(Board *bd) {
 	board_gotocursor(bd);
 }
 
+// check if the player has won
 bool board_win(Board *bd) {
 	return bd->startTime != -1 && bd->nopen == bd->w*bd->h - bd->nbombs;
 }
 
+// prompt the user (yes / no)
 bool prompt(const char *msg, int height) {
 	gotoxy(0, height);
 	prflush("%s [y/N] ", msg);
@@ -395,6 +418,7 @@ bool prompt(const char *msg, int height) {
 }
 
 
+// prompt the user and quit if they want to
 void prompt_quit(int height) {
 	if (prompt("Really quit?", height)) {
 		exit(0);
@@ -403,6 +427,8 @@ void prompt_quit(int height) {
 	}
 }
 
+// prompt the player if they want to replay
+// shows the given timestamp
 bool prompt_playagain(const char *msg, const char *timestamp, int height) {
 	char *str;
 	asprintf(&str, "\x1B[7m%s (%s)\x1B[0m\nPlay again?", timestamp, msg);
@@ -411,12 +437,15 @@ bool prompt_playagain(const char *msg, const char *timestamp, int height) {
 	return res;
 }
 
+// signal catcher
 void signalend(int sig) {
 	(void)sig;
 	endscreen();
 	exit(1);
 }
 
+// format the given time_t in a human friendly format
+// allocates memory
 void formatTime(char **dest, time_t seconds) {
 	int minutes = seconds / 60;
 	int hours = minutes / 60;
