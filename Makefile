@@ -1,11 +1,15 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c99
 BIN = msweep
+TARGETS = $(BIN) antest
 
-.PHONY: install uninstall clean remake all
+.PHONY: all clean install uninstall make_in_analysis
 
-$(BIN): msweep.c
-	$(CC) $(CFLAGS) -o $@ $^
+all: make_in_analysis $(TARGETS)
+
+clean:
+	rm -f $(TARGETS)
+	+make --no-print-directory -C analysis clean
 
 install: $(BIN)
 	install $(BIN) /usr/local/bin
@@ -13,9 +17,12 @@ install: $(BIN)
 uninstall: $(BIN)
 	rm -f /usr/local/bin/$(BIN)
 
-clean:
-	rm -f $(BIN)
+make_in_analysis:
+	+make --no-print-directory -C analysis
 
-remake: clean $(BIN)
 
-all: $(BIN)
+msweep: msweep.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+antest: antest.c analysis/libanalysis.a
+	$(CC) $(CFLAGS) -o $@ $^ analysis/libanalysis.a

@@ -1,2 +1,4 @@
 msweep
+antest
 *.o
+*.dSYM
